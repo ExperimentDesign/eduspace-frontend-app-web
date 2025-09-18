@@ -7,43 +7,22 @@ export class MeetService {
         return http.get(this.resourceEndpoint);
     }
 
-    getById(id) {
-        return http.get(`${this.resourceEndpoint}/${id}`);
-    }
-
-    create(meetResource) {
-        return http.post(this.resourceEndpoint, meetResource);
-    }
-
-    update(id, meetResource) {
-        return http.put(`${this.resourceEndpoint}/${id}`, meetResource);
-    }
-
     delete(id) {
         return http.delete(`${this.resourceEndpoint}/${id}`);
     }
 
-    findByName(name) {
-        return http.get(`${this.resourceEndpoint}?name=${name}`);
+    create(administratorId, classroomId, meetResource) {
+        const url = `/administrators/${administratorId}/classrooms/${classroomId}/meetings`;
+        return http.post(url, meetResource);
     }
 
-    findByDay(day) {
-        return http.get(`${this.resourceEndpoint}?day=${day}`);
+    update(id, meetResource) {
+        const url = `${this.resourceEndpoint}/${id}`;
+        return http.put(url, meetResource);
     }
 
-    findByHour(hour) {
-        return http.get(`${this.resourceEndpoint}?hour=${hour}`);
-    }
-
-    findByLocation(location) {
-        return http.get(`${this.resourceEndpoint}?location=${location}`);
-    }
-
-    findByTeacher(teacherName) {
-        return http.get(`${this.resourceEndpoint}?teachers.name=${teacherName}`);
-    }
-
-    findByInvitee(teacherName) {
-        return http.get(`${this.resourceEndpoint}?invite.name=${teacherName}`);
+    addTeacherToMeeting(meetingId, teacherId) {
+        const url = `${this.resourceEndpoint}/${meetingId}/teachers/${teacherId}`;
+        return http.post(url, {});
     }
 }

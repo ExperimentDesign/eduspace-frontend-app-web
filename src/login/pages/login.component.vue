@@ -114,22 +114,6 @@ p {
   margin-bottom: 1.5em;
 }
 
-.login-form {
-  display: flex;
-  flex-direction: column;
-  width: 80%;
-  max-width: 300px;
-}
-
-.forgot-password {
-  text-align: left;
-  color: #9e9e9e;
-  font-size: 0.9em;
-  margin-bottom: 20px;
-  cursor: pointer;
-  text-decoration: none;
-}
-
 .sign-up-button {
   margin-top: 20px;
   background: linear-gradient(to right, #34a7c1, #4ad4d4);

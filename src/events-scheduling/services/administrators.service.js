@@ -1,6 +1,7 @@
 import http from "../../shared/services/http-common.js";
+
 export class AdministratorsService {
-    resourceEndpoint = '/administrators-profiles';
+    resourceEndpoint = '/administrator-profiles';
 
     getAllAdministrators() {
         return http.get(this.resourceEndpoint);

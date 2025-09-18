@@ -1,3 +1,4 @@
+// Archivo: meet.entity.js
 export class Meet {
     constructor({
                     id = 0,
@@ -6,12 +7,9 @@ export class Meet {
                     day = '',
                     start = '',
                     end = '',
-                    classroom = '',
-                    teachers = [],
-                    invite = [],
-                    administrators = [],
-                    accountable = [],
-                    administrator = { name: "No person in charge" } // Agregar administrador principal
+                    classroom = null,
+                    administrator = null,
+                    teachers = []
                 }) {
         this.id = id;
         this.title = title;
@@ -20,8 +18,7 @@ export class Meet {
         this.start = start;
         this.end = end;
         this.classroom = classroom;
-        this.teachers = teachers.length ? teachers : invite;
-        this.administrators = administrators.length ? administrators : accountable;
-        this.administrator = administrator; // Incluir el campo `administrator`
+        this.administrator = administrator;
+        this.teachers = teachers;
     }
 }

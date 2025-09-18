@@ -1,8 +1,8 @@
 <script>
 import CreateAndEdit from "../../shared/components/create-and-edit.component.vue";
-import { TeachersService } from "../services/teachers.service.js";
+import { TeacherService } from "../services/teachers.service.js";
 import { mapGetters } from "vuex";
-import {ClassroomsService} from "../services/classroom.service.js";
+import { ClassroomsService } from "../services/classroom.service.js";
 
 export default {
   name: "meet-create-and-edit-dialog",
@@ -15,6 +15,10 @@ export default {
     visible: {
       type: Boolean,
       required: true
+    },
+    edit: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -24,108 +28,115 @@ export default {
       teachers: [],
       classrooms: [],
       selectedTeachers: [],
-      selectedClassroom: null
     };
   },
   computed: {
-    // Obtener el nombre del administrador logueado desde Vuex
-    ...mapGetters(["userName"])
+    ...mapGetters('user', ['userId', 'currentUsername']),
+
+    userName() {
+      return this.currentUsername;
+    }
   },
   created() {
-    this.loadTeachers();
-    this.loadClassrooms();
-    this.formatTeachersForEdit();
+    this.loadInitialData();
   },
   watch: {
     item: {
-      handler(newVal) {
-        this.localItem = { ...newVal };
+      handler(newItem) {
+        this.localItem = { ...newItem };
+        if (newItem.id) {
+          this.localItem.administratorId = newItem.administrator?.id || null;
+          // Para edición, si el item ya tiene un classroom, asignarlo al classroomId
+          if (newItem.classroom) {
+            this.localItem.classroomId = newItem.classroom.id;
+          }
+        } else {
+          this.localItem.administratorId = this.userId;
+          this.localItem.classroomId = null; // Limpiar para nueva creación
+        }
+        this.formatTeachersForEdit();
       },
-      deep: true
+      deep: true,
+      immediate: true
     }
   },
   methods: {
-    loadTeachers() {
-      const teacherService = new TeachersService();
-      teacherService.getAllTeachers()
-          .then(response => {
-            this.teachers = response.data.map(teacher => ({
-              id: teacher.id,
-              name: `${teacher.firstName} ${teacher.lastName}`
-            }));
-            console.log("Teachers loaded:", this.teachers);
-          })
-          .catch(error => {
-            console.error("Error loading teachers:", error);
-          });
+    async loadInitialData() {
+      try {
+        await Promise.all([this.loadTeachers(), this.loadClassrooms()]);
+        console.log("Initial data loaded");
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+      }
     },
-    loadClassrooms() {
+    async loadTeachers() {
+      const response = await TeacherService.fetchTeachers();
+      this.teachers = response.map(teacher => ({
+        id: teacher.id,
+        name: `${teacher.firstName} ${teacher.lastName}`
+      }));
+      console.log("Teachers loaded:", this.teachers);
+    },
+    async loadClassrooms() {
       const classroomsService = new ClassroomsService();
-      classroomsService.getAllClassrooms()
-          .then(response => {
-            this.classrooms = response.data.map(classroom => ({
-              id: classroom.id,
-              name: classroom.name
-            }));
-            console.log("Classrooms loaded:", this.classrooms);
-          })
-          .catch(error => {
-            console.error("Error loading classrooms:", error);
-          });
+      const response = await classroomsService.getAllClassrooms();
+      this.classrooms = response.data.map(classroom => ({
+        id: classroom.id,
+        name: classroom.name
+      }));
+      console.log("Classrooms loaded:", this.classrooms);
     },
     formatTeachersForEdit() {
-      // Instead of mutating props, use a local copy
-      if (Array.isArray(this.item.teachers) && this.item.teachers.length > 0 && typeof this.item.teachers[0] === 'object') {
-        this.selectedTeachers = this.item.teachers.map(teacher => teacher.id);
+      if (Array.isArray(this.item.teachers) && this.item.teachers.length > 0) {
+        this.selectedTeachers = this.item.teachers.map(teacher => typeof teacher === 'object' ? teacher.id : teacher);
       } else {
-        this.selectedTeachers = this.item.teachers || [];
+        this.selectedTeachers = [];
       }
     },
     formatDate(date) {
+      if (!date) return null;
       const d = new Date(date);
       return d.toISOString().split('T')[0];
     },
     formatTime(time) {
-      if (!time || isNaN(Date.parse(time))) {
-        return 'Invalid';
-      }
-
+      if (!time) return null;
       const d = new Date(time);
       const hours = String(d.getHours()).padStart(2, '0');
       const minutes = String(d.getMinutes()).padStart(2, '0');
-      return `${hours}:${minutes}`;
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
     },
     onCancelRequested() {
-      console.log("Cancel button clicked in child component");
       this.$emit('update:visible', false);
-      this.$emit('cancel-requested');
     },
     onSaveRequested() {
       this.submitted = true;
-      if (this.item.day && this.item.start && this.item.end) {
-        // Use local variables instead of mutating props
-        const formattedDay = this.formatDate(this.item.day);
-        const formattedStart = this.formatTime(this.item.start);
-        const formattedEnd = this.formatTime(this.item.end);
-        // Formatear los teachers seleccionados
-        const selectedTeachers = this.teachers
-            .filter(teacher => this.selectedTeachers.includes(teacher.id))
-            .map(teacher => ({
-              id: teacher.id,
-              name: teacher.name,
-              username: teacher.username
-            }));
-        // Emit a new object instead of mutating props
-        this.$emit('save-requested', {
-          ...this.item,
-          day: formattedDay,
-          start: formattedStart,
-          end: formattedEnd,
-          teachers: selectedTeachers
-        });
+      if (!this.localItem.title || !this.localItem.day || !this.localItem.start || !this.localItem.end || !this.localItem.classroomId) {
+        return;
       }
-    }
 
+      const payload = {
+        administratorId: this.localItem.administratorId,
+        classroomId: this.localItem.classroomId,
+
+        meetData: {
+          title: this.localItem.title,
+          description: this.localItem.description || '',
+          date: this.formatDate(this.localItem.day),
+          start: this.formatTime(this.localItem.start),
+          end: this.formatTime(this.localItem.end),
+        },
+        teacherIds: this.selectedTeachers
+      };
+
+      if (this.edit) {
+        payload.meetData.meetingId = this.localItem.id;
+        payload.meetData.administratorId = this.localItem.administratorId;
+        payload.meetData.classroomId = this.localItem.classroomId;
+      }
+
+      this.$emit('save-requested', payload);
+    }
   }
 };
 </script>
@@ -140,45 +151,71 @@ export default {
       @saved="onSaveRequested"
   >
     <template #content>
-      <div class="p-fluid">
-        <div class="field mt-5">
+      <div class="p-fluid grid formgrid">
+        <div class="field col-12">
           <pv-float-label>
-            <label for="name">Name</label>
-            <pv-input-text id="name" v-model="localItem.name" :class="{ 'p-invalid': submitted && !localItem.name }" />
+            <label for="title">Title</label>
+            <pv-input-text id="title" v-model="localItem.title" :class="{ 'p-invalid': submitted && !localItem.title }" />
           </pv-float-label>
+        </div>
 
+        <div class="field col-12">
           <pv-float-label>
-            <label for="day">Day</label>
+            <label for="description">Description</label>
+            <pv-input-text id="description" v-model="localItem.description" />
+          </pv-float-label>
+        </div>
+
+        <div class="field col-12">
+          <pv-float-label>
+            <pv-dropdown
+                id="classroom"
+                v-model="localItem.classroomId"
+                :options="classrooms"
+                optionLabel="name"
+                optionValue="id"
+                placeholder="Select a classroom"
+                :class="{ 'p-invalid': submitted && !localItem.classroomId }" />
+          </pv-float-label>
+        </div>
+
+        <div class="field col-12">
+          <pv-float-label>
             <pv-date-picker
                 v-model="localItem.day"
-                showIcon
-                fluid
-                :showOnFocus="false"
+                showIcon fluid :showOnFocus="false"
                 date-format="yy-mm-dd"
                 :class="{ 'p-invalid': submitted && !localItem.day }"
                 placeholder="Select a day"
             />
           </pv-float-label>
+        </div>
 
+        <div class="field col-12 md:col-6">
           <pv-float-label>
-            <label for="hour">Hour</label>
             <pv-date-picker
-                v-model="localItem.hour"
-                showIcon
-                fluid
+                id="start-time"
+                v-model="localItem.start"
                 timeOnly
-                iconDisplay="input"
-                :class="{ 'p-invalid': submitted && !localItem.hour }"
-                placeholder="Select a time"
-            >
-              <template #inputicon="slotProps">
-                <i class="pi pi-clock" @click="slotProps.clickCallback" />
-              </template>
-            </pv-date-picker>
+                :class="{ 'p-invalid': submitted && !localItem.start }"
+                placeholder="Start time"
+            />
           </pv-float-label>
-
+        </div>
+        <div class="field col-12 md:col-6">
           <pv-float-label>
-            <label for="invite">Invite</label>
+            <pv-date-picker
+                id="end-time"
+                v-model="localItem.end"
+                timeOnly
+                :class="{ 'p-invalid': submitted && !localItem.end }"
+                placeholder="End time"
+            />
+          </pv-float-label>
+        </div>
+
+        <div class="field col-12">
+          <pv-float-label>
             <pv-multi-select
                 id="invite"
                 v-model="selectedTeachers"
@@ -186,13 +223,7 @@ export default {
                 option-label="name"
                 option-value="id"
                 placeholder="Select teachers"
-                :class="{ 'p-invalid': submitted && !selectedTeachers }"
             />
-          </pv-float-label>
-
-          <pv-float-label>
-            <label for="location">Location</label>
-            <pv-input-text id="location" v-model="localItem.location" :class="{ 'p-invalid': submitted && !localItem.location }" />
           </pv-float-label>
         </div>
       </div>
@@ -201,5 +232,26 @@ export default {
 </template>
 
 <style scoped>
-/* Estilos específicos */
+
+.formgrid .field {
+  margin-bottom: 1.5rem;
+}
+
+.p-float-label > label {
+  top: 0.75rem;
+  left: 0.75rem;
+}
+
+/* Ajusta la posición de la etiqueta cuando el campo está activo o lleno. */
+.p-float-label > .p-inputtext:focus ~ label,
+.p-float-label > .p-inputtext.p-filled ~ label,
+.p-float-label > .p-dropdown.p-focus ~ label,
+.p-float-label > .p-dropdown.p-inputwrapper-filled ~ label,
+.p-float-label > .p-datepicker.p-focus ~ label,
+.p-float-label > .p-datepicker.p-inputwrapper-filled ~ label,
+.p-float-label > .p-multiselect.p-focus ~ label,
+.p-float-label > .p-multiselect.p-inputwrapper-filled ~ label {
+  top: -0.75rem;
+  font-size: 0.75rem;
+}
 </style>

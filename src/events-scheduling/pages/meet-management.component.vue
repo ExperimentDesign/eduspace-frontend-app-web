@@ -1,36 +1,71 @@
 <script>
-import {Meet} from "../model/meet.entity.js";
+import { Meet } from "../model/meet.entity.js";
 import DataManager from "../../shared/components/data-meet.component.vue";
 import MeetCreateAndEditDialog from "../components/meet-create-and-edit.component.vue";
-import {MeetService} from "../services/meet.service.js";
+import { MeetService } from "../services/meet.service.js";
+import { ClassroomsService } from "../services/classroom.service.js";
+import { AdministratorsService } from "../services/administrators.service.js";
+
 
 export default {
   name: "meet-management",
-  components: {MeetCreateAndEditDialog, DataManager},
+  components: { MeetCreateAndEditDialog, DataManager },
   data() {
     return {
-      title: {singular: 'Meet', plural: 'Meetings'},
+      title: { singular: 'Meet', plural: 'Meetings' },
       meetings: [],
       meet: new Meet({}),
       selectedMeetings: [],
       meetService: null,
+      classroomsService: null,
+      administratorsService: null,
       createAndEditDialogIsVisible: false,
       isEdit: false,
       submitted: false,
     }
   },
   methods: {
-
-    //#region Utility Methods
     notifySuccessfulAction(message) {
-      this.$toast.add({severity: 'success', summary: 'Success', detail: message, life: 3000});
+      this.$toast.add({ severity: 'success', summary: 'Success', detail: message, life: 3000 });
     },
-    findIndexById(id) {
-      return this.meetings.findIndex(meet => meet.id === id);
+    notifyErrorAction(message) {
+      this.$toast.add({ severity: 'error', summary: 'Error', detail: message, life: 3000 });
     },
-    //#endregion
 
-    //#region Event Handlers
+    async loadMeetings() {
+      try {
+        const [meetingsResponse, classroomsResponse, administratorsResponse] = await Promise.all([
+          this.meetService.getAll(),
+          this.classroomsService.getAllClassrooms(),
+          this.administratorsService.getAllAdministrators()
+        ]);
+
+        const meetingsData = meetingsResponse.data;
+        const allClassrooms = classroomsResponse.data;
+        const allAdministrators = administratorsResponse.data;
+
+        this.meetings = meetingsData.map(meetData => {
+          const classroom = allClassrooms.find(c => c.id === meetData.classroomId?.classroomIdentifier);
+          const administrator = allAdministrators.find(a => a.id === meetData.administratorId?.administratorIdentifier);
+
+          return new Meet({
+            id: meetData.meetingId, // Usa el nombre de la propiedad de la API
+            title: meetData.title,
+            description: meetData.description,
+            day: meetData.date,
+            start: meetData.start,
+            end: meetData.end,
+            classroom: classroom,
+            administrator: administrator,
+            teachers: meetData.teachers || []
+          });
+        });
+      } catch (error) {
+        console.error("Error loading and enriching meetings:", error);
+        this.notifyErrorAction('Could not load meetings data.');
+      }
+    },
+
     onNewItem() {
       this.meet = new Meet({});
       this.isEdit = false;
@@ -38,159 +73,119 @@ export default {
       this.createAndEditDialogIsVisible = true;
     },
     onEditItem(item) {
-      this.meet = new Meet(item);
+      this.meet = JSON.parse(JSON.stringify(item));
       this.isEdit = true;
       this.submitted = false;
-
-      if (Array.isArray(this.meet.teachers) && this.meet.teachers.length > 0) {
-        this.meet.teachers = this.meet.teachers.map(teacher => teacher.id ? teacher.id : teacher);
-      } else {
-        this.meet.teachers = [];
-      }
-
-      if (Array.isArray(this.meet.administrators) && this.meet.administrators.length > 0) {
-        this.meet.administrators = this.meet.administrators.map(administrator => administrator.id ? administrator.id : administrator);
-      } else {
-        this.meet.administrators = [];
-      }
-
       this.createAndEditDialogIsVisible = true;
     },
     onDeleteItem(item) {
-      this.meet = new Meet(item);
-      this.deleteMeet();
-    },
-    onDeleteSelectedItems(selectedItems) {
-      this.selectedMeetings = selectedItems;
-      this.deleteSelectedMeetings();
+      this.meetService.delete(item.id).then(() => {
+        this.meetings = this.meetings.filter(m => m.id !== item.id);
+        this.notifySuccessfulAction('Meet Deleted');
+      }).catch(error => {
+        console.error("Error deleting meet:", error);
+        this.notifyErrorAction('Could not delete meet.');
+      });
     },
     onCancelRequested() {
       this.createAndEditDialogIsVisible = false;
-      this.submitted = false;
-      this.isEdit = false;
     },
-    onSaveRequested(item) {
+    onSaveRequested(payload) {
       this.submitted = true;
-      if (this.meet.title.trim()) {
-        if (item.id) {
-          this.updateMeet();
-        } else {
-          this.createMeet();
-        }
-        this.createAndEditDialogIsVisible = false;
-        this.isEdit = false;
+      if (this.isEdit) {
+        this.updateMeet(payload);
+      } else {
+        this.createMeet(payload);
       }
     },
-    //#endregion
+    async createMeet(payload) {
+      try {
+        const createResponse = await this.meetService.create(
+            payload.administratorId,
+            payload.classroomId,
+            payload.meetData
+        );
+        const newMeeting = createResponse.data;
 
-    //#region Action Methods
-    createMeet() {
-      this.meetService.create(this.meet).then(response => {
-        let meet = new Meet(response.data);
-        this.meetings.push(meet);
-        this.notifySuccessfulAction('Meet Created');
-      }).catch(error => console.error(error));
+        if (payload.teacherIds && payload.teacherIds.length > 0) {
+          const addTeachersPromises = payload.teacherIds.map(teacherId =>
+              this.meetService.addTeacherToMeeting(newMeeting.meetingId, teacherId)
+          );
+          await Promise.all(addTeachersPromises);
+        }
+        await this.loadMeetings();
+        this.notifySuccessfulAction('Meet Created Successfully');
+      } catch (error) {
+        console.error("Error during meet creation process:", error);
+        this.notifyErrorAction('An error occurred while creating the meet.');
+      } finally {
+        this.createAndEditDialogIsVisible = false;
+      }
     },
-    updateMeet() {
-      this.meetService.update(this.meet.id, this.meet).then(response => {
-        let index = this.findIndexById(this.meet.id);
-        this.meetings[index] = new Meet(response.data);
-        this.notifySuccessfulAction('Meet Updated');
-      }).catch(error => console.error(error));
+    async updateMeet(payload) {
+      try {
+        payload.meetData.administratorId = this.meet.administrator?.id;
+        payload.meetData.classroomId = this.meet.classroom?.id;
+
+        console.log("🧠 Payload de ACTUALIZACIÓN enviado al servidor:", payload.meetData);
+
+        await this.meetService.update(this.meet.id, payload.meetData);
+        await this.loadMeetings();
+        this.notifySuccessfulAction('Meet Updated Successfully');
+      } catch (error) {
+        console.error("Error updating meet:", error);
+        this.notifyErrorAction('An error occurred while updating the meet.');
+      } finally {
+        this.createAndEditDialogIsVisible = false;
+      }
     },
-    deleteMeet() {
-      this.meetService.delete(this.meet.id).then(() => {
-        let index = this.findIndexById(this.meet.id);
-        this.meetings.splice(index, 1);
-        this.notifySuccessfulAction('Meet Deleted');
-      }).catch(error => console.error(error));
-    },
-    deleteSelectedMeetings() {
-      this.selectedMeetings.forEach((meet) => {
-        this.meetService.delete(meet.id).then(() => {
-          this.meetings = this.meetings.filter((t) => t.id !== meet.id);
-        });
-      });
-      this.notifySuccessfulAction('Meetings Deleted');
-    },
-    getTeacherNames(teacherIds) {
-      return teacherIds.map(id => {
-        const teacher = this.teachers.find(t => t.id === id);
-        return teacher ? `${teacher.firstName} ${teacher.lastName}` : '';
-      }).join(', ');
-    },
-    //#endregion
   },
-  //#region Lifecycle Hooks
   created() {
     this.meetService = new MeetService();
-    this.meetService.getAll().then(response => {
-      console.log("Raw API Response:", response.data); // Verificar los datos originales
-
-      this.meetings = response.data.map(meet => {
-        // Instanciar correctamente `Meet` preservando `administrator`
-        return new Meet({
-          ...meet,
-          administrator: meet.administrator || { name: "No person in charge" }
-        });
-      });
-
-      console.log("Processed Meetings:", this.meetings); // Verificar los datos procesados
-    }).catch(error => console.error(error));
+    this.classroomsService = new ClassroomsService();
+    this.administratorsService = new AdministratorsService();
+    this.loadMeetings();
   }
-
-  //#endregion
 }
 </script>
 
 <template>
   <div class="w-full">
-    <data-manager class="data-manager" :title="title"
-                  v-bind:items="meetings"
-                  v-on:new-item-requested="onNewItem"
-                  v-on:edit-item-requested="onEditItem($event)"
-                  v-on:delete-item-requested="onDeleteItem($event)"
-                  v-on:delete-selected-items-requested="onDeleteSelectedItems($event)">
+    <data-manager
+        :title="title"
+        :items="meetings"
+        @new-item-requested="onNewItem"
+        @edit-item-requested="onEditItem($event)"
+        @delete-item-requested="onDeleteItem($event)">
+
       <template #custom-columns>
-        <pv-column class="pv-column" :sortable="true" field="id" header="Id" style="min-width: 5rem"/>
-        <pv-column class="pv-column" :sortable="true" field="title" header="Title" style="min-width: 5rem"/>
-        <pv-column class="pv-column" :sortable="true" field="description" header="Description" style="min-width: 5rem"/>
-        <pv-column class="pv-column" :sortable="true" field="day" header="Day" style="min-width: 5rem"/>
-        <pv-column class="pv-column" :sortable="true" field="start" header="Start Time" style="min-width: 5rem"/>
-        <pv-column class="pv-column" :sortable="true" field="end" header="End Time" style="min-width: 5rem"/>
-        <pv-column class="pv-column" :sortable="true" field="classroom" header="Classroom" style="min-width: 5rem"/>
-        <pv-column class="pv-column" header="Invite" style="min-width: 5rem">
+        <pv-column field="id" header="Id" :sortable="true"></pv-column>
+        <pv-column field="title" header="Title" :sortable="true"></pv-column>
+        <pv-column field="description" header="Description"></pv-column>
+        <pv-column field="day" header="Day" :sortable="true"></pv-column>
+        <pv-column field="start" header="Start Time"></pv-column>
+        <pv-column field="end" header="End Time"></pv-column>
+        <pv-column field="classroom.name" header="Classroom" :sortable="true"></pv-column>
+        <pv-column field="administrator.firstName" header="Person in charge" :sortable="true"></pv-column>
+        <pv-column header="Invitees">
           <template #body="slotProps">
             <span v-if="slotProps.data.teachers && slotProps.data.teachers.length">
-              {{ slotProps.data.teachers.map(teacher => teacher.firstName + ' ' + teacher.lastName).join(', ') }}
+              {{ slotProps.data.teachers.map(t => t.firstName).join(', ') }}
             </span>
-            <span v-else>
-              No teachers invited
-            </span>
+            <span v-else>No teachers</span>
           </template>
         </pv-column>
-        <pv-column class="pv-column" header="Persons in charge" style="min-width: 5rem">
-          <template #body="slotProps">
-    <span v-if="slotProps.data.administrator && slotProps.data.administrator.name">
-      {{ slotProps.data.administrator.name }}
-    </span>
-            <span v-else>
-      No person in charge
-    </span>
-          </template>
-        </pv-column>
-
-
-
       </template>
     </data-manager>
+
     <meet-create-and-edit-dialog
-        :edit="isEdit"
         :item="meet"
         :visible="createAndEditDialogIsVisible"
-        v-on:cancel-requested="onCancelRequested"
-        v-on:save-requested="onSaveRequested($event)"
-        @update:visible="value => createAndEditDialogIsVisible = value"/>
+        :edit="isEdit"
+        @update:visible="value => createAndEditDialogIsVisible = value"
+        @cancel-requested="onCancelRequested"
+        @save-requested="onSaveRequested($event)"
+    />
   </div>
 </template>
 
