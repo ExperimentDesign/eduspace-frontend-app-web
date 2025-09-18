@@ -4,7 +4,7 @@ import { mapActions, mapState } from 'vuex';
 import { SignInRequest } from "../../iam/model/sign-in.request.js";
 
 export default {
-  name: "login",
+  name: "LoginPage",
   components: { LoginForm },
   data() {
     return {
@@ -24,35 +24,20 @@ export default {
 
     async handleLogin({ email, password }) {
       try {
-        console.log("Login initiated");
-
         // Crear el objeto de solicitud
         const userPayload = { username: email, password: password };
         this.signInRequest = new SignInRequest(userPayload);
-        console.log("Request:", this.signInRequest);
 
         // Llamada al método Vuex para iniciar sesión
         await this.signIn(this.signInRequest);
 
-        // Confirmar valores después de Vuex
-        console.log("User stored in Vuex after login:", {
-          id: this.userId,
-          role: this.userRole,
-          token: this.userToken,
-        });
-
         // Redirigir basado en el rol
         if (this.userRole === "RoleAdmin") {
-          console.log("Redirecting to Admin Dashboard");
           this.$router.push("/dashboard-admin/home-admin");
         } else if (this.userRole === "RoleTeacher") {
-          console.log("Redirecting to Teacher Dashboard");
           this.$router.push("/dashboard-teacher/home-teacher");
-        } else {
-          console.warn("Unrecognized role:", this.userRole);
         }
-      } catch (error) {
-        console.error("Error during login:", error);
+      } catch {
         alert("Error during login. Please check your credentials.");
       }
     },

@@ -3,8 +3,6 @@ import CreateAndEdit from "../../shared/components/create-and-edit.component.vue
 import { TeachersService } from "../services/teachers.service.js";
 import { mapGetters } from "vuex";
 import {ClassroomsService} from "../services/classroom.service.js";
-import {NotificationMService} from "../services/notificationM.service.js";
- // Importar el servicio de notificación
 
 export default {
   name: "meet-create-and-edit-dialog",
@@ -21,6 +19,7 @@ export default {
   },
   data() {
     return {
+      localItem: { ...this.item },
       submitted: false,
       teachers: [],
       classrooms: [],
@@ -36,6 +35,14 @@ export default {
     this.loadTeachers();
     this.loadClassrooms();
     this.formatTeachersForEdit();
+  },
+  watch: {
+    item: {
+      handler(newVal) {
+        this.localItem = { ...newVal };
+      },
+      deep: true
+    }
   },
   methods: {
     loadTeachers() {
@@ -67,9 +74,11 @@ export default {
           });
     },
     formatTeachersForEdit() {
-      // Convertir item.teachers a IDs si es necesario
+      // Instead of mutating props, use a local copy
       if (Array.isArray(this.item.teachers) && this.item.teachers.length > 0 && typeof this.item.teachers[0] === 'object') {
-        this.item.teachers = this.item.teachers.map(teacher => teacher.id);
+        this.selectedTeachers = this.item.teachers.map(teacher => teacher.id);
+      } else {
+        this.selectedTeachers = this.item.teachers || [];
       }
     },
     formatDate(date) {
@@ -94,20 +103,26 @@ export default {
     onSaveRequested() {
       this.submitted = true;
       if (this.item.day && this.item.start && this.item.end) {
-        this.item.day = this.formatDate(this.item.day);
-        this.item.start = this.formatTime(this.item.start);
-        this.item.end = this.formatTime(this.item.end);
-
+        // Use local variables instead of mutating props
+        const formattedDay = this.formatDate(this.item.day);
+        const formattedStart = this.formatTime(this.item.start);
+        const formattedEnd = this.formatTime(this.item.end);
         // Formatear los teachers seleccionados
-        this.item.teachers = this.teachers
-            .filter(teacher => this.item.teachers.includes(teacher.id))
+        const selectedTeachers = this.teachers
+            .filter(teacher => this.selectedTeachers.includes(teacher.id))
             .map(teacher => ({
               id: teacher.id,
-              name: teacher.name, // Utilizar el nombre completo si es necesario
+              name: teacher.name,
               username: teacher.username
             }));
-
-        this.$emit('save-requested', this.item);
+        // Emit a new object instead of mutating props
+        this.$emit('save-requested', {
+          ...this.item,
+          day: formattedDay,
+          start: formattedStart,
+          end: formattedEnd,
+          teachers: selectedTeachers
+        });
       }
     }
 
@@ -117,7 +132,7 @@ export default {
 
 <template>
   <create-and-edit
-      :entity="item"
+      :entity="localItem"
       :visible="visible"
       entity-name="Meet"
       @update:visible="(value) => $emit('update:visible', value)"
@@ -129,18 +144,18 @@ export default {
         <div class="field mt-5">
           <pv-float-label>
             <label for="name">Name</label>
-            <pv-input-text id="name" v-model="item.name" :class="{ 'p-invalid': submitted && !item.name }" />
+            <pv-input-text id="name" v-model="localItem.name" :class="{ 'p-invalid': submitted && !localItem.name }" />
           </pv-float-label>
 
           <pv-float-label>
             <label for="day">Day</label>
             <pv-date-picker
-                v-model="item.day"
+                v-model="localItem.day"
                 showIcon
                 fluid
                 :showOnFocus="false"
                 date-format="yy-mm-dd"
-                :class="{ 'p-invalid': submitted && !item.day }"
+                :class="{ 'p-invalid': submitted && !localItem.day }"
                 placeholder="Select a day"
             />
           </pv-float-label>
@@ -148,12 +163,12 @@ export default {
           <pv-float-label>
             <label for="hour">Hour</label>
             <pv-date-picker
-                v-model="item.hour"
+                v-model="localItem.hour"
                 showIcon
                 fluid
                 timeOnly
                 iconDisplay="input"
-                :class="{ 'p-invalid': submitted && !item.hour }"
+                :class="{ 'p-invalid': submitted && !localItem.hour }"
                 placeholder="Select a time"
             >
               <template #inputicon="slotProps">
@@ -166,18 +181,18 @@ export default {
             <label for="invite">Invite</label>
             <pv-multi-select
                 id="invite"
-                v-model="item.teachers"
+                v-model="selectedTeachers"
                 :options="teachers"
                 option-label="name"
                 option-value="id"
                 placeholder="Select teachers"
-                :class="{ 'p-invalid': submitted && !item.teachers }"
+                :class="{ 'p-invalid': submitted && !selectedTeachers }"
             />
           </pv-float-label>
 
           <pv-float-label>
             <label for="location">Location</label>
-            <pv-input-text id="location" v-model="item.location" :class="{ 'p-invalid': submitted && !item.location }" />
+            <pv-input-text id="location" v-model="localItem.location" :class="{ 'p-invalid': submitted && !localItem.location }" />
           </pv-float-label>
         </div>
       </div>

@@ -14,19 +14,14 @@ const http = axios.create({
 http.interceptors.request.use(
     (config) => {
         const token = store.getters["user/userToken"];
-        console.log("Interceptor: Recuperando token de Vuex:", token);
 
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
-            console.log("Interceptor: Token añadido al header Authorization.");
-        } else {
-            console.warn("Interceptor: No se encontró un token.");
         }
 
         return config;
     },
     (error) => {
-        console.error("Interceptor: Error en la solicitud:", error);
         return Promise.reject(error);
     }
 );

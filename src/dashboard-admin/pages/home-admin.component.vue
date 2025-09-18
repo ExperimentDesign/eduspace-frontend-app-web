@@ -1,6 +1,5 @@
 <template>
   <div class="dashboard-layout">
-    <!-- Información del Administrador -->
     <div class="admin-info">
       <div class="admin-avatar">
         <pv-avatar
@@ -18,33 +17,22 @@
       </div>
     </div>
 
-
-    <!-- Tarjeta de Profesores -->
     <pv-card class="teachers-card scrollable-card">
       <template #header>
         <h3 class="teachers-title">Teachers Created</h3>
       </template>
       <template #content>
-        <div v-if="teachers.length">
-          <ul class="teachers-list">
-            <li v-for="(teacher, index) in teachers" :key="index">
-              <p><strong>Name:</strong> {{ teacher.firstName }} {{ teacher.lastName }}</p>
-              <p><strong>Email:</strong> {{ teacher.email }}</p>
-              <p><strong>DNI:</strong> {{ teacher.dni }}</p>
-              <p><strong>Phone:</strong> {{ teacher.phone }}</p>
-              <p><strong>Working Days:</strong> {{ teacher.workingDays }}</p>
-              <p><strong>Field:</strong> {{ teacher.field }}</p>
-              <hr v-if="index < teachers.length - 1" />
-            </li>
-          </ul>
-        </div>
-        <div v-else>
-          <p>No teachers created by this administrator.</p>
+        <p class="teachers-summary">Total teachers: {{ teachers.length }}</p>
+        <div class="teacher-list">
+          <TeacherCardComponent
+            v-for="teacher in teachers"
+            :key="teacher.id"
+            :teacher="teacher"
+          />
         </div>
       </template>
     </pv-card>
 
-    <!-- Tarjeta de Reuniones -->
     <pv-card class="meet-card scrollable-card">
       <template #header>
         <h3 class="meet-title">Meetings in Charge</h3>
@@ -75,7 +63,6 @@
       </template>
     </pv-card>
 
-    <!-- Tarjeta de Reports -->
     <pv-card class="reports-card scrollable-card">
       <template #header>
         <h3 class="reports-title">Reports</h3>
@@ -103,10 +90,15 @@
 
 <script>
 import { mapGetters } from "vuex";
+import TeacherCardComponent from "../../personal-data/components/teacher-card.component.vue";
+import { TeacherService } from "../../personal-data/services/teacher.service.js";
 import http from "../../shared/services/http-common.js";
 
 export default {
   name: "AdminDashboard",
+  components: {
+    TeacherCardComponent
+  },
   data() {
     return {
       admin: null,
@@ -128,32 +120,25 @@ export default {
       if (!this.userId) return;
 
       const adminResponse = await http.get("/administrator-profiles");
-      console.log("Administrators from backend:", adminResponse.data);
-
       this.admin = adminResponse.data.find((a) => Number(a.id) === Number(this.userId));
-
       if (!this.admin) {
-        console.warn(`No administrator found for the current user ID: ${this.userId}`);
         return;
       }
 
-      console.log("Administrator data:", this.admin);
-
-      const meetingsResponse = await http.get("/meet");
+      // Use correct endpoint for meetings
+      const meetingsResponse = await http.get("/meetings");
       this.meetings = meetingsResponse.data.filter(
           (meeting) =>
               meeting.administrator?.name === `${this.admin.firstName} ${this.admin.lastName}`
       );
 
-      const teachersResponse = await http.get("/teachers-profiles");
-      this.teachers = teachersResponse.data.filter(
-          (teacher) => String(teacher.administratorId) === String(this.userId)
-      );
+      // Use TeacherService to fetch teachers
+      this.teachers = await TeacherService.fetchTeachers();
 
       const reportsResponse = await http.get("/reports");
-      this.reports = reportsResponse.data;
-    } catch (error) {
-      console.error("Error loading data:", error);
+      this.reports = reportsResponse.data || [];
+    } catch {
+      // Limpieza: quitamos console.error
     }
   },
 
@@ -190,7 +175,6 @@ export default {
   gap: 10px;
 }
 
-
 .scrollable-card {
   height: 400px; /* Altura fija */
   overflow-y: auto; /* Scroll interno */
@@ -214,5 +198,21 @@ export default {
   text-align: center;
   font-size: 18px;
   font-weight: bold;
+}
+
+.teacher-list {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.teachers-card {
+  margin-bottom: 20px;
+}
+
+.teachers-summary {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
 }
 </style>

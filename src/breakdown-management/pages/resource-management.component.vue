@@ -121,6 +121,6 @@ export default {
 }
 
 .report-resource-button:hover {
-  background-color: #ffdb4d; /* Color al pasar el mouse sobre el botón */
+  background-color: #ffdb4d; /* Color al pasar el mouse sobre el botón */
 }
 </style>

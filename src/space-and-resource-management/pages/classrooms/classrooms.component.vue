@@ -4,7 +4,7 @@ import ClassroomCard from "../../components/classrooms/classroom-card.component.
 import {TeacherService} from "../../../personal-data/services/teacher.service.js";
 
 export default {
-  name: "classroom",
+  name: "ClassroomsPage",
   components: {ClassroomCard},
   data() {
     return {

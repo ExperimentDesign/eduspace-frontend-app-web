@@ -64,7 +64,6 @@
 </template>
 
 <script>
-import LanguageSwitcher from "./public/components/language-switcher.component.vue";
 import { mapGetters, mapActions } from "vuex";
 
 // Importar los SVG desde las rutas especificadas
@@ -72,18 +71,11 @@ import HomeIcon from "/src/assets/admin/Home.svg";
 import ClassroomIcon from "/src/assets/admin/Clasroom.svg";
 import EnviromentIcon from "/src/assets/admin/Enviroment.svg";
 import PersonalDIcon from "/src/assets/admin/Personal_Data.svg";
-import PersonalMIcon from "/src/assets/admin/Personal_Management.svg";
-import SalaryIcon from "/src/assets/admin/Salary_Calculation.svg";
-
-// Íconos específicos para la vista del "teacher"
 import BreakdownIcon from "/src/assets/teacher/Breakdown_Reports.svg";
 import NotificationIcon from "/src/assets/teacher/Notification.svg";
-import PagesIcon from "/src/assets/teacher/Pages.svg";
-import ReservationIcon from "/src/assets/teacher/Reservation.svg";
 import SpaceIcon from "/src/assets/teacher/Space_Availability.svg";
 export default {
   name: "app",
-  components: { LanguageSwitcher },
   data() {
     return {
       drawer: false,
@@ -109,14 +101,12 @@ export default {
           { label: "Classrooms and Shared Spaces", to: "/dashboard-admin/classrooms-shared-spaces", svg: EnviromentIcon },
           {label: 'Classroom Changes and Meetings', to: '/dashboard-admin/classroom-changes-meetings', svg: ClassroomIcon},
           { label: "Personal Data", to: "/dashboard-admin/personal-data", svg: PersonalDIcon },
-          { label: "Salary Calculation", to: "/dashboard-admin/salary-calculation", svg: SalaryIcon },
         ];
       } else if (this.userRole === "RoleTeacher") {
         this.items = [
           { label: "Home", to: "/dashboard-teacher/home-teacher", svg: HomeIcon },
           { label: "Notifications", to: "/dashboard-teacher/notifications", svg: NotificationIcon },
           { label: "Breakdown Reports", to: "/dashboard-teacher/breakdown-reports", svg: BreakdownIcon },
-          { label: "Wages", to: "/dashboard-teacher/wages", svg: BreakdownIcon },
           { label: "Space Availability", to: "/dashboard-teacher/space-availability", svg: SpaceIcon },
         ];
       } else {

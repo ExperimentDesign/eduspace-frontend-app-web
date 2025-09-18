@@ -3,7 +3,7 @@
 import { mapActions, mapGetters } from 'vuex'
 
 export default {
-  name: "login",
+  name: "LoginPagePublic",
   computed: {
     ...mapGetters('user', ['userId', 'userRole'])
   },

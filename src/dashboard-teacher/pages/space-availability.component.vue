@@ -1,11 +1,13 @@
 <script>
 export default {
-  name: "space-availability"
+  name: "TeacherSpaceAvailability"
 }
 </script>
 
 <template>
-
+  <div>
+    <!-- Add your space availability UI here -->
+  </div>
 </template>
 
 <style scoped>

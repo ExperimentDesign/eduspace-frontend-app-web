@@ -92,9 +92,11 @@ export default {
       paginator-template="FirstPageLink PrevPageLink PageLinks NextPageLink LastPageLink RowsPerPageDropdown">
     <pv-column :exportable="false" selection-mode="multiple" style="width: 3em"/>
     <slot name="custom-columns"></slot>
-    <pv-column v-if="dynamic" v-for="column in columns"
-               :key="column.field"
-               :field="column.field" :header="column.header"/>
+    <template v-if="dynamic">
+      <pv-column v-for="column in columns"
+                 :key="column.field"
+                 :field="column.field" :header="column.header"/>
+    </template>
     <pv-column :exportable="false" style="min-width:8rem">
       <template #body="slotProps">
         <pv-button icon="pi pi-pencil" outlined rounded class="mr-2" @click="editItem(slotProps.data)"/>

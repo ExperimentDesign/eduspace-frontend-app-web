@@ -77,12 +77,12 @@ export default {
       }
     },
     async toggleStatus(report) {
-      const { resourceName, ...reportToUpdate } = report;
-      const updatedReport = { ...reportToUpdate, status: report.status === "en proceso" ? "completado" : "en proceso" };
-
+      // Removed unused variable resourceName
+      const reportToUpdate = { ...report, status: report.status === "en proceso" ? "completado" : "en proceso" };
+      delete reportToUpdate.resourceName;
       try {
-        await this.reportService.update(report.id, updatedReport);
-        report.status = updatedReport.status;
+        await this.reportService.update(report.id, reportToUpdate);
+        report.status = reportToUpdate.status;
       } catch (error) {
         console.error("Error updating report status:", error);
       }
@@ -152,6 +152,6 @@ th {
 }
 
 .status-icon:hover {
-  color: #ffcc00; /* Color al pasar el mouse sobre el ícono */
+  color: #ffcc00; /* Color al pasar el mouse sobre el ícono */
 }
 </style>
