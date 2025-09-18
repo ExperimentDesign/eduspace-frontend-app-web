@@ -1,11 +1,13 @@
 <script>
 export default {
-  name: "notifications"
+  name: "TeacherNotifications"
 }
 </script>
 
 <template>
-
+  <div>
+    <!-- Add your notifications UI here -->
+  </div>
 </template>
 
 <style scoped>

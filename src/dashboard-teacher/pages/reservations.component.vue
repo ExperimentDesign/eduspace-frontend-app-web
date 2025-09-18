@@ -1,6 +1,6 @@
 <script>
 export default {
-  name: "reservations",
+  name: "TeacherReservations",
   methods: {
     goToReservationSpaces() {
       this.$router.push('/');

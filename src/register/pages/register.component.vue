@@ -2,13 +2,19 @@
 import RegisterForm from "../components/register-form.component.vue";
 import { SignUpRequest } from "../../iam/model/sign-up.request.js";
 import RegisterService from "../services/register.services.js";
+import { mapGetters } from "vuex";
 
 export default {
-  name: "register",
+  name: "RegisterPage",
   components: {RegisterForm},
+  computed: {
+    ...mapGetters("user", ["userId"]),
+  },
   methods: {
     async handleSubmit(formData) {
       try {
+        // Agregar administratorId al formData
+        formData.administratorId = this.userId;
         // Crear la instancia de SignUpRequest con los datos del formulario
         const signUpRequest = new SignUpRequest(formData);
 

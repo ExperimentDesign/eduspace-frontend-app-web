@@ -90,6 +90,13 @@ export default {
   },
 
 }
+
+// Add definition for createEventId or import if needed
+function createEventId() {
+  return String(eventGuid++)
+}
+
+let eventGuid = 0
 </script>
 
 <template>
