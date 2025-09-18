@@ -44,6 +44,20 @@ export default {
     item: {
       handler(newItem) {
         this.localItem = { ...newItem };
+
+        if (newItem.start && typeof newItem.start === 'string') {
+          const [hours, minutes, seconds] = newItem.start.split(':');
+          const startDate = new Date();
+          startDate.setHours(hours, minutes, seconds || 0);
+          this.localItem.start = startDate;
+        }
+        if (newItem.end && typeof newItem.end === 'string') {
+          const [hours, minutes, seconds] = newItem.end.split(':');
+          const endDate = new Date();
+          endDate.setHours(hours, minutes, seconds || 0);
+          this.localItem.end = endDate;
+        }
+
         if (newItem.id) {
           this.localItem.administratorId = newItem.administrator?.id || null;
           // Para edición, si el item ya tiene un classroom, asignarlo al classroomId
