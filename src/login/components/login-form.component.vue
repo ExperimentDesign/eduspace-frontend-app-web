@@ -22,24 +22,20 @@ export default {
 
 <template>
   <div class="login-form-container">
-    <h2>Sign in</h2>
-
-    <form @submit.prevent="submitLogin">
-      <pv-input-text v-model="email" placeholder="Email" required />
-      <pv-password v-model="password" placeholder="Password" toggleMask required />
-
-      <div class="role-selection">
+    <h2 class="login-title">Sign in</h2>
+    <form @submit.prevent="submitLogin" class="login-form-grid">
+      <div class="login-inputs">
+        <pv-input-text v-model="email" placeholder="Email" required class="login-input" />
+        <pv-password v-model="password" placeholder="Password" toggleMask required class="login-input" />
       </div>
-
-      <a href="#" class="forgot-password">Forgot your password?</a>
-
-      <pv-button type="submit" label="SIGN IN" class="sign-in-button" />
+      <div class="login-actions">
+        <pv-button type="submit" label="SIGN IN" class="sign-in-button" />
+      </div>
     </form>
   </div>
 </template>
 
 <style scoped>
-/* Estilos del formulario de inicio de sesión */
 .login-form-container {
   display: flex;
   flex-direction: column;
@@ -48,22 +44,38 @@ export default {
   margin: auto;
 }
 
-.role-selection {
-  margin-top: 1em;
+.login-title {
+  text-align: center;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.login-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 0px 0px;
   width: 100%;
 }
 
-.forgot-password {
-  text-align: right;
-  color: #9e9e9e;
-  font-size: 0.9em;
-  margin-bottom: 20px;
-  cursor: pointer;
-  text-decoration: none;
+.login-inputs {
+  grid-column: 1 / 3;
+  grid-row: 1 / 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.login-actions {
+  grid-column: 1 / 3;
+  grid-row: 2 / 3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
 }
 
 .sign-in-button {
-  margin-top: 20px;
   background: linear-gradient(to right, #34a7c1, #4ad4d4);
   color: white;
   border: none;
@@ -76,5 +88,25 @@ export default {
 
 .sign-in-button:hover {
   background: linear-gradient(to right, #2fa1b4, #41b8b8);
+}
+
+.login-input {
+  margin-bottom: 18px;
+}
+
+@media (max-width: 600px) {
+  .login-form-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .login-inputs, .login-actions {
+    grid-column: unset;
+    grid-row: unset;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+  }
 }
 </style>
